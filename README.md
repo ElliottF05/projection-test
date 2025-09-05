@@ -1,8 +1,4 @@
-# Babylon Projection (TypeScript + Vite)
-
-Simple demo: a large mostly-transparent sphere at the origin, a small draggable sphere, and another small sphere showing the projection of the draggable sphere onto the large sphere's surface.
-
-Setup
+### Setup
 
 1. Install dependencies:
 
