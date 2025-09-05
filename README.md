@@ -1,9 +1,8 @@
-### Setup
+# Setup
 
 1. Install dependencies:
 
 ```bash
-cd /Users/elliottfaa/Desktop/Research/projection
 npm install
 ```
 
