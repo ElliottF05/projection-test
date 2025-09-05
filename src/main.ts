@@ -49,10 +49,10 @@ planeMarker.material = markerMat
 // Parent marker to plane so we can set its local coordinates (z=0 is on plane surface)
 planeMarker.parent = plane
 
-// Mercator helper (no external deps): take latitude & longitude in radians
+// Mercator helper: take latitude & longitude in radians
 function mercatorNormalizedXY(latRad: number, lonRad: number) {
   // clamp latitude to avoid infinity at poles
-  const maxLat = 85 * Math.PI / 180
+  const maxLat = 89 * Math.PI / 180
   const lat = Math.max(Math.min(latRad, maxLat), -maxLat)
   const x = lonRad // range -PI..PI
   const y = Math.log(Math.tan(Math.PI / 4 + lat / 2)) // range roughly -maxY..maxY
