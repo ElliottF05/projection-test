@@ -31,7 +31,7 @@ export class PointPair {
         this.id = opts.id
         this.opts = opts
         const { scene, id, bigRadius } = opts
-
+        
         const color = opts.color || Color3.Random()
         
         // 3D sphere
@@ -50,7 +50,7 @@ export class PointPair {
         const defaultRadius = 0.2 * bigRadius
         this.radius3D = opts.collisionRadius3D ?? defaultRadius
         this.radius2D = opts.collisionRadius2D ?? defaultRadius
-
+        
         // place initial position if provided
         if (typeof opts.initialLat === 'number' && typeof opts.initialLon === 'number') {
             const v = latLonToVec3(opts.initialLat, opts.initialLon, bigRadius)
@@ -76,81 +76,59 @@ export class PointPair {
         const sphereDrag = new SixDofDragBehavior()
         sphereDrag.onPositionChangedObservable.add(() => {
             if (this.ignoreSphere) return
-            // Project onto sphere surface
-            this.sphere.position = projectOntoSphere(this.sphere.position, bigRadius)
-            
-            // compute lat/lon
-            const p = this.sphere.position.clone().normalize()
-            const lat = Math.asin(p.y)
-            const lon = Math.atan2(p.z, p.x)
-            
-            // update projected marker
-            this.ignoreProjected = true
-            const { nx, ny } = mercatorNormalizedXY(lat, lon)
-            this.projected.position.x = nx * (planeWidth / 2)
-            this.projected.position.y = ny * (planeHeight / 2)
-            this.ignoreProjected = false
+            // use setter which projects onto the sphere and updates the projected marker
+            this.setSpherePosition(this.sphere.position.clone())
         })
         this.sphere.addBehavior(sphereDrag)
         
         const projDrag = new SixDofDragBehavior()
         projDrag.onPositionChangedObservable.add(() => {
             if (this.ignoreProjected) return
-            // clamp to plane extents
-            this.projected.position.z = 0
-            this.projected.position.x = Math.min(Math.max(this.projected.position.x, -planeWidth / 2), planeWidth / 2)
-            this.projected.position.y = Math.min(Math.max(this.projected.position.y, -planeHeight / 2), planeHeight / 2)
-            
-            const nx = this.projected.position.x / (planeWidth / 2)
-            const ny = this.projected.position.y / (planeHeight / 2)
-            const { lat, lon } = inverseMercatorNormalizedXY(nx, ny)
-            
-            this.ignoreSphere = true
-            const globePos = latLonToVec3(lat, lon, bigRadius)
-            this.sphere.position = globePos
-            this.ignoreSphere = false
+            // delegate to setter which clamps and updates the sphere
+            this.setProjectedLocalPosition(this.projected.position.clone())
         })
         this.projected.addBehavior(projDrag)
+        
     }
-
+    
     // Public helper: set sphere position programmatically and update projected marker
     public setSpherePosition(newPos: Vector3) {
         const { bigRadius, planeWidth, planeHeight } = this.opts
         this.ignoreSphere = true
         this.sphere.position = projectOntoSphere(newPos, bigRadius)
-
+        
         // compute lat/lon and update projected marker without triggering its handler
         const p = this.sphere.position.clone().normalize()
         const lat = Math.asin(p.y)
         const lon = Math.atan2(p.z, p.x)
         const { nx, ny } = mercatorNormalizedXY(lat, lon)
-
+        
         this.ignoreProjected = true
         this.projected.position.x = nx * (planeWidth / 2)
         this.projected.position.y = ny * (planeHeight / 2)
         this.ignoreProjected = false
-
+        
         this.ignoreSphere = false
     }
-
+    
     // Public helper: set projected (local plane) position and update sphere accordingly
     public setProjectedLocalPosition(localPos: Vector3) {
         const { bigRadius, planeWidth, planeHeight } = this.opts
         // clamp to plane extents
         const clampedX = Math.min(Math.max(localPos.x, -planeWidth / 2), planeWidth / 2)
         const clampedY = Math.min(Math.max(localPos.y, -planeHeight / 2), planeHeight / 2)
-
+        
         this.ignoreProjected = true
         this.projected.position.x = clampedX
         this.projected.position.y = clampedY
         this.projected.position.z = 0
         this.ignoreProjected = false
-
+        
         // convert to normalized and update sphere without triggering its handler
         const nx = clampedX / (planeWidth / 2)
         const ny = clampedY / (planeHeight / 2)
         const { lat, lon } = inverseMercatorNormalizedXY(nx, ny)
-
+        
         this.ignoreSphere = true
         const globePos = latLonToVec3(lat, lon, bigRadius)
         this.sphere.position = globePos
