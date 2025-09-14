@@ -24,7 +24,20 @@ pointManager.create({
   initialLat: 0,
   initialLon: 0,
 })
+pointManager.create({
+  id: 'pair2',
+  scene,
+  bigRadius,
+  plane,
+  planeWidth,
+  planeHeight,
+  initialLat: Math.PI / 4.0,
+  initialLon: 0,
+})
 
 
 sceneManager.getEngine().runRenderLoop(() => scene.render())
+sceneManager.getScene().onBeforeRenderObservable.add(() => {
+  pointManager.resolveCollisions()
+})
 window.addEventListener('resize', () => sceneManager.getEngine().resize())

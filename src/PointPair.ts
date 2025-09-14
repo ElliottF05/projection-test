@@ -11,12 +11,18 @@ export interface PointPairOptions {
     initialLat?: number
     initialLon?: number
     color?: Color3
+    // collision radii (optional) - in world units
+    collisionRadius3D?: number
+    collisionRadius2D?: number
 }
 
 export class PointPair {
     public readonly id: string
     public sphere: Mesh
     public projected: Mesh
+    // collision radii accessible publicly
+    public radius3D: number
+    public radius2D: number
     private opts: PointPairOptions
     private ignoreSphere = false
     private ignoreProjected = false
@@ -40,6 +46,11 @@ export class PointPair {
         pMat.diffuseColor = color
         this.projected.material = pMat
         
+        // set default collision radii (can be overridden via options)
+        const defaultRadius = 0.2 * bigRadius
+        this.radius3D = opts.collisionRadius3D ?? defaultRadius
+        this.radius2D = opts.collisionRadius2D ?? defaultRadius
+
         // place initial position if provided
         if (typeof opts.initialLat === 'number' && typeof opts.initialLon === 'number') {
             const v = latLonToVec3(opts.initialLat, opts.initialLon, bigRadius)
@@ -100,5 +111,49 @@ export class PointPair {
             this.ignoreSphere = false
         })
         this.projected.addBehavior(projDrag)
+    }
+
+    // Public helper: set sphere position programmatically and update projected marker
+    public setSpherePosition(newPos: Vector3) {
+        const { bigRadius, planeWidth, planeHeight } = this.opts
+        this.ignoreSphere = true
+        this.sphere.position = projectOntoSphere(newPos, bigRadius)
+
+        // compute lat/lon and update projected marker without triggering its handler
+        const p = this.sphere.position.clone().normalize()
+        const lat = Math.asin(p.y)
+        const lon = Math.atan2(p.z, p.x)
+        const { nx, ny } = mercatorNormalizedXY(lat, lon)
+
+        this.ignoreProjected = true
+        this.projected.position.x = nx * (planeWidth / 2)
+        this.projected.position.y = ny * (planeHeight / 2)
+        this.ignoreProjected = false
+
+        this.ignoreSphere = false
+    }
+
+    // Public helper: set projected (local plane) position and update sphere accordingly
+    public setProjectedLocalPosition(localPos: Vector3) {
+        const { bigRadius, planeWidth, planeHeight } = this.opts
+        // clamp to plane extents
+        const clampedX = Math.min(Math.max(localPos.x, -planeWidth / 2), planeWidth / 2)
+        const clampedY = Math.min(Math.max(localPos.y, -planeHeight / 2), planeHeight / 2)
+
+        this.ignoreProjected = true
+        this.projected.position.x = clampedX
+        this.projected.position.y = clampedY
+        this.projected.position.z = 0
+        this.ignoreProjected = false
+
+        // convert to normalized and update sphere without triggering its handler
+        const nx = clampedX / (planeWidth / 2)
+        const ny = clampedY / (planeHeight / 2)
+        const { lat, lon } = inverseMercatorNormalizedXY(nx, ny)
+
+        this.ignoreSphere = true
+        const globePos = latLonToVec3(lat, lon, bigRadius)
+        this.sphere.position = globePos
+        this.ignoreSphere = false
     }
 }
