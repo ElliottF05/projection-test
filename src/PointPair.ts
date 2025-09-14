@@ -23,6 +23,8 @@ export class PointPair {
     // collision radii accessible publicly
     public radius3D: number
     public radius2D: number
+    // whether this pair is currently being dragged by the user
+    public isDragging: boolean = false
     private opts: PointPairOptions
     private ignoreSphere = false
     private ignoreProjected = false
@@ -74,6 +76,9 @@ export class PointPair {
         const { bigRadius, planeWidth, planeHeight } = this.opts
         
         const sphereDrag = new SixDofDragBehavior()
+        // update dragging flag on start/end and delegate position updates to setter
+        sphereDrag.onDragStartObservable.add(() => { this.isDragging = true })
+        sphereDrag.onDragEndObservable.add(() => { this.isDragging = false })
         sphereDrag.onPositionChangedObservable.add(() => {
             if (this.ignoreSphere) return
             // use setter which projects onto the sphere and updates the projected marker
@@ -82,6 +87,8 @@ export class PointPair {
         this.sphere.addBehavior(sphereDrag)
         
         const projDrag = new SixDofDragBehavior()
+        projDrag.onDragStartObservable.add(() => { this.isDragging = true })
+        projDrag.onDragEndObservable.add(() => { this.isDragging = false })
         projDrag.onPositionChangedObservable.add(() => {
             if (this.ignoreProjected) return
             // delegate to setter which clamps and updates the sphere

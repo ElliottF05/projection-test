@@ -36,8 +36,10 @@ pointManager.create({
 })
 
 
-sceneManager.getEngine().runRenderLoop(() => scene.render())
-sceneManager.getScene().onBeforeRenderObservable.add(() => {
+sceneManager.getEngine().runRenderLoop(() => {
+  // render the scene
+  scene.render()
+  // resolve collisions each frame so dragged pairs are separated in real-time
   pointManager.resolveCollisions()
 })
 window.addEventListener('resize', () => sceneManager.getEngine().resize())
