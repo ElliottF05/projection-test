@@ -23,6 +23,9 @@ export class PointPair {
     // collision radii accessible publicly
     public radius3D: number
     public radius2D: number
+    // visual collision helpers (mostly-transparent red)
+    public collisionVis3D: Mesh
+    public collisionVis2D: Mesh
     // whether this pair is currently being dragged by the user
     public isDragging: boolean = false
     private opts: PointPairOptions
@@ -52,6 +55,31 @@ export class PointPair {
         const defaultRadius = 0.2 * bigRadius
         this.radius3D = opts.collisionRadius3D ?? defaultRadius
         this.radius2D = opts.collisionRadius2D ?? defaultRadius
+
+        // create mostly-transparent red collision visuals
+        this.collisionVis3D = MeshBuilder.CreateSphere(id + '_col3d', { diameter: this.radius3D * 2 }, scene)
+        const col3Mat = new StandardMaterial(id + '_col3d_mat', scene)
+        col3Mat.diffuseColor = new Color3(1, 0, 0)
+        col3Mat.alpha = 0.25
+        col3Mat.disableLighting = false
+        this.collisionVis3D.material = col3Mat
+        // position and parent to the sphere so it follows
+        this.collisionVis3D.parent = this.sphere
+        this.collisionVis3D.isVisible = false
+        this.collisionVis3D.isPickable = false
+
+        // 2D collision visual (parented to plane so local coordinates align)
+        this.collisionVis2D = MeshBuilder.CreateSphere(id + '_col2d', { diameter: this.radius2D * 2 }, scene)
+        const col2Mat = new StandardMaterial(id + '_col2d_mat', scene)
+        col2Mat.diffuseColor = new Color3(1, 0, 0)
+        col2Mat.alpha = 0.25
+        col2Mat.disableLighting = false
+        this.collisionVis2D.material = col2Mat
+        this.collisionVis2D.parent = opts.plane
+        // set to projected local position initially
+        this.collisionVis2D.position = this.projected.position.clone()
+        this.collisionVis2D.isVisible = false
+        this.collisionVis2D.isPickable = false
         
         // place initial position if provided
         if (typeof opts.initialLat === 'number' && typeof opts.initialLon === 'number') {
@@ -140,5 +168,20 @@ export class PointPair {
         const globePos = latLonToVec3(lat, lon, bigRadius)
         this.sphere.position = globePos
         this.ignoreSphere = false
+    }
+
+    // Collision visual controls
+    public showCollision3D(visible: boolean) {
+        if (!this.collisionVis3D) return
+        this.collisionVis3D.isVisible = visible
+    }
+
+    public showCollision2D(visible: boolean) {
+        if (!this.collisionVis2D) return
+        // keep the visual at the projected local position
+        this.collisionVis2D.position.x = this.projected.position.x
+        this.collisionVis2D.position.y = this.projected.position.y
+        this.collisionVis2D.position.z = 0
+        this.collisionVis2D.isVisible = visible
     }
 }

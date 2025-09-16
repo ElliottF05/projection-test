@@ -29,6 +29,13 @@ export class PointPairManager {
         // 1) 3D pass: check distances on sphere surface (Euclidean in 3D) and separate overlapping pairs
         // 2) 2D pass: check distances on the projection plane (local plane coordinates) and separate overlaps
         
+        // Reset all collision visuals first
+        for (const p of this.pairs) {
+            // hide both until detected
+            p.showCollision3D(false) 
+            p.showCollision2D(false)
+        }
+
         // 3D pass
         for (let i = 0; i < this.pairs.length; i++) {
             for (let j = i + 1; j < this.pairs.length; j++) {
@@ -39,8 +46,13 @@ export class PointPairManager {
                 const delta = pb.subtract(pa)
                 const dist = delta.length()
                 const minDist = (a.radius3D + b.radius3D)
+
                 if (dist > 0 && dist < minDist) {
-                    const overlap = minDist - dist
+                    // show 3D collision visuals for both
+                    a.showCollision3D(true)
+                    b.showCollision3D(true)
+
+                    const overlap = Math.max(minDist - dist, 0.0001)
                     const dir = delta.normalize()
                     // Only move the one that is currently being dragged. If both or neither are dragging, skip.
                     if (a.isDragging && !b.isDragging) {
@@ -56,6 +68,8 @@ export class PointPairManager {
                     }
                 } else if (dist === 0) {
                     // Exact same position: if one is dragging, nudge that one; otherwise skip
+                    a.showCollision3D(true)
+                    b.showCollision3D(true)
                     if (a.isDragging && !b.isDragging) {
                         a.setSpherePosition(pa.add(new (pa.constructor as any)(-0.001, -0.001, -0.001)))
                     } else if (b.isDragging && !a.isDragging) {
@@ -77,8 +91,11 @@ export class PointPairManager {
                 const dy = pb.y - pa.y
                 const dist = Math.sqrt(dx * dx + dy * dy)
                 const minDist = (a.radius2D + b.radius2D)
+
                 if (dist > 0 && dist < minDist) {
-                    const overlap = minDist - dist
+                    a.showCollision2D(true)
+                    b.showCollision2D(true)
+                    const overlap = Math.max(minDist - dist, 0.0001)
                     const nx = dx / dist
                     const ny = dy / dist
                     // Only move the one that is being dragged
@@ -90,6 +107,9 @@ export class PointPairManager {
                         // neither or both dragging: do nothing
                     }
                 } else if (dist === 0) {
+                    a.showCollision2D(true)
+                    b.showCollision2D(true)
+                    // Exact same position: if one is dragging, nudge that one; otherwise skip
                     if (a.isDragging && !b.isDragging) {
                         a.setProjectedLocalPosition(new (pa.constructor as any)(pa.x - 0.01, pa.y, 0))
                     } else if (b.isDragging && !a.isDragging) {
