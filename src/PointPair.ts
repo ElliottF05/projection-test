@@ -1,5 +1,5 @@
 import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, SixDofDragBehavior, Vector3 } from '@babylonjs/core'
-import { mercatorNormalizedXY, inverseMercatorNormalizedXY, latLonToVec3, projectOntoSphere } from './projection'
+import { mercatorNormalizedXY, inverseMercatorNormalizedXY, equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere } from './projection'
 
 export interface PointPairOptions {
     id: string
@@ -85,12 +85,14 @@ export class PointPair {
         if (typeof opts.initialLat === 'number' && typeof opts.initialLon === 'number') {
             const v = latLonToVec3(opts.initialLat, opts.initialLon, bigRadius)
             this.sphere.position = v
-            const { nx, ny } = mercatorNormalizedXY(opts.initialLat, opts.initialLon)
+            // const { nx, ny } = mercatorNormalizedXY(opts.initialLat, opts.initialLon)
+            const { nx, ny } = equirectangularNormalizedXY(opts.initialLat, opts.initialLon)
             this.projected.position = new Vector3(nx * (opts.planeWidth / 2), ny * (opts.planeHeight / 2), 0)
         } else {
             // default placement
             this.sphere.position = new Vector3(bigRadius, 0, 0)
-            const { nx, ny } = mercatorNormalizedXY(0, 0)
+            // const { nx, ny } = mercatorNormalizedXY(0, 0)
+            const { nx, ny } = equirectangularNormalizedXY(0, 0)
             this.projected.position = new Vector3(nx * (opts.planeWidth / 2), ny * (opts.planeHeight / 2), 0)
         }
         
@@ -136,7 +138,8 @@ export class PointPair {
         const p = this.sphere.position.clone().normalize()
         const lat = Math.asin(p.y)
         const lon = Math.atan2(p.z, p.x)
-        const { nx, ny } = mercatorNormalizedXY(lat, lon)
+        // const { nx, ny } = mercatorNormalizedXY(lat, lon)
+        const { nx, ny } = equirectangularNormalizedXY(lat, lon)
         
         this.ignoreProjected = true
         this.projected.position.x = nx * (planeWidth / 2)
@@ -162,8 +165,9 @@ export class PointPair {
         // convert to normalized and update sphere without triggering its handler
         const nx = clampedX / (planeWidth / 2)
         const ny = clampedY / (planeHeight / 2)
-        const { lat, lon } = inverseMercatorNormalizedXY(nx, ny)
-        
+        // const { lat, lon } = inverseMercatorNormalizedXY(nx, ny)
+        const { lat, lon } = inverseEquirectangularNormalizedXY(nx, ny)
+
         this.ignoreSphere = true
         const globePos = latLonToVec3(lat, lon, bigRadius)
         this.sphere.position = globePos
