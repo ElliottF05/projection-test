@@ -93,6 +93,11 @@ export class Chart {
     }
     setRotation = (rot: BABYLON.Vector3) => {
         this.selection.rotation(rot);
+        this.selection.run((d,n,i) => {
+            if ('rotationQuaternion' in n) {
+                n.rotationQuaternion = BABYLON.Quaternion.FromEulerVector(rot);
+            }
+        })
     }
     scale = (s: number) => {
         this.selection.scaling(BABYLON.Vector3.One().scale(s));

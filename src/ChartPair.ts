@@ -89,6 +89,10 @@ export class ChartPair {
             this.chart2D.setPosition(world2)
         }
 
+        // temp: rotate 2d vis
+        this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
+        this.chart2D.setPosition(this.chart2D.getPosition().subtract(new Vector3(0.05, 0, 0)))
+
         // sync chart visuals and wire behaviors
         this.setupBehaviors()
     }
@@ -98,11 +102,13 @@ export class ChartPair {
         pb3.onDragStartObservable.add(() => { this.isDragging = true })
         pb3.onDragEndObservable.add(() => { this.isDragging = false })
         pb3.onPositionChangedObservable.add(() => {
+
             // console.log('3D position changed')
             // if (this.ignore3D) return
             const pos = this.chart3D.getPosition()
             this.setSpherePosition(pos)
         })
+        pb3.detachCameraControls = true
 
         const pb2 = this.chart2D._positionBehavior
         pb2.onDragStartObservable.add(() => { this.isDragging = true })
@@ -116,6 +122,7 @@ export class ChartPair {
             const localPos = Vector3.TransformCoordinates(worldPos, inv)
             this.setProjectedLocalPosition(localPos)
         })
+        pb2.detachCameraControls = true
     }
 
     public setSpherePosition(newPos: Vector3) {
@@ -133,7 +140,12 @@ export class ChartPair {
         // compute plane-local pos then transform to world before setting the 2D chart
         const local2 = new Vector3(nx * (planeWidth / 2), ny * (planeHeight / 2), 0)
         const world2 = Vector3.TransformCoordinates(local2, plane.getWorldMatrix())
+
+        // temp offset:
+        world2.x -= 0.05
+
         this.chart2D.setPosition(world2)
+        this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
         this.ignore2D = false
         // ensure we clear the 3D ignore flag
         this.ignore3D = false
@@ -146,7 +158,12 @@ export class ChartPair {
 
         this.ignore2D = true
         const worldPos = Vector3.TransformCoordinates(new Vector3(clampedX, clampedY, 0), this.opts.plane.getWorldMatrix())
+        
+        // temp offset:
+        worldPos.x -= 0.05
+
         this.chart2D.setPosition(worldPos)
+        this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
         this.ignore2D = false
 
         const nx = clampedX / (planeWidth / 2)
