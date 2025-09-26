@@ -9,18 +9,39 @@ import penguinData from "../data/penguins.json" assert { type: "json" };
 // Centralized layout defaults
 export const CHART_SCALE_FACTOR = 0.8;
 
+type ChartKind = 'line' | '2dbar' | 'scatter' | '3dbar';
 export class Chart {
-    id: string;
     scene: BABYLON.Scene;
     selection: anu.Selection;
 
     _positionBehavior: BABYLON.SixDofDragBehavior;
     _scaleBehavior: BABYLON.PointerDragBehavior;
 
-    constructor(id: string, scene: BABYLON.Scene, anuSelection: anu.Selection) {
-        this.id = id;
+    // Keep an internal counter to generate unique ids for created charts
+    private static _nextId = 1;
+
+    // constructor accepts a chart kind string and the scene; it creates the underlying anu selection
+    constructor(kind: ChartKind, scene: BABYLON.Scene) {
         this.scene = scene;
-        this.selection = anuSelection;
+
+        const id = `${kind}_${Chart._nextId++}`;
+
+        switch (kind) {
+            case 'line':
+                this.selection = createLineChart(id, scene) as any;
+                break;
+            case '2dbar':
+                this.selection = create2DBarChart(id, scene) as any;
+                break;
+            case 'scatter':
+                this.selection = createScatterPlot(id, scene) as any;
+                break;
+            case '3dbar':
+                this.selection = create3DBarChart(id, scene) as any;
+                break;
+            default:
+                this.selection = createLineChart(id, scene) as any;
+        }
 
         const yOffset = -0.2;
         const positionUiOptions = {
@@ -31,7 +52,7 @@ export class Chart {
             position: new BABYLON.Vector3(0, yOffset, 0),
             behavior: new BABYLON.SixDofDragBehavior(),
         }
-        anuSelection.positionUI(positionUiOptions);
+        this.selection.positionUI(positionUiOptions);
         this._positionBehavior = positionUiOptions.behavior;
 
         const rotateUiOptions = {
@@ -40,7 +61,7 @@ export class Chart {
             diameter: 0.08,
             position: new BABYLON.Vector3(0, yOffset, 0),
         }
-        anuSelection.rotateUI(rotateUiOptions);
+        this.selection.rotateUI(rotateUiOptions);
 
         const scaleUiOptions = {
             name: id + "scaleUI",
@@ -51,13 +72,12 @@ export class Chart {
             position: new BABYLON.Vector3(0, yOffset + 0.025, 0),
             behavior: new BABYLON.PointerDragBehavior(),
         }
-        anuSelection.scaleUI(scaleUiOptions);
+        this.selection.scaleUI(scaleUiOptions);
         this._scaleBehavior = scaleUiOptions.behavior;
     }
 
     static makeLineChart(scene: BABYLON.Scene) {
-        const lineChartProto = createLineChart('lineChart', scene);
-        return new Chart('lineChart', scene, lineChartProto);
+        return new Chart('line', scene);
     }
 
     getPosition = () => {
@@ -75,7 +95,7 @@ export class Chart {
 }
 
 // Code for line chart
-export function createLineChart(id: string, scene: BABYLON.Scene) {
+function createLineChart(id: string, scene: BABYLON.Scene) {
     // Simulated stock data since we don't have the CSV
     const stockData = generateStockData();
 
@@ -134,27 +154,6 @@ export function createLineChart(id: string, scene: BABYLON.Scene) {
     anu.createAxes("myAxes", axesOptionsLine);
 
     return chart;
-
-    // const yOffset = -0.2;
-    // chart
-    //     .scaling(BABYLON.Vector3.One().scale(CHART_SCALE_FACTOR))
-    //     .addTags("chart")
-    //     .addTags("LineChart")
-    //     .positionUI({
-    //         visibility: 0.6,
-    //         width: 0.5,
-    //         radius: 0.03,
-    //         position: new BABYLON.Vector3(0, yOffset, 0),
-    //     })
-    //     .rotateUI({ visibility: 0.6, diameter: 0.08, position: new BABYLON.Vector3(0, yOffset, 0) })
-    //     .scaleUI({
-    //         visibility: 0.6,
-    //         diameter: 0.08,
-    //         minimum: 0.5,
-    //         maximum: 2,
-    //         position: new BABYLON.Vector3(0, yOffset + 0.025, 0),
-    //     });
-    // return chart;
 }
 
 // Helper function to generate sample stock data
@@ -180,7 +179,7 @@ function generateStockData() {
 }
 
 //Code from 2D bar chart example
-export function create2DBarChart(id: string, scene: BABYLON.Scene) {
+function create2DBarChart(id: string, scene: BABYLON.Scene) {
     const cylinders = [...new Set(carData.map((item) => item.Cylinders))].sort();
     let carsRollup = d3.flatRollup(
         carData,
@@ -222,31 +221,11 @@ export function create2DBarChart(id: string, scene: BABYLON.Scene) {
     axesOptions2D.labelOptions = { size: 0.25 };
     anu.createAxes("myAxes", axesOptions2D);
 
-    const yOffset = -0.2;
-    chart
-        .scaling(BABYLON.Vector3.One().scale(CHART_SCALE_FACTOR))
-        .addTags("chart")
-        .addTags("2DBarChart")
-        .positionUI({
-            visibility: 0.6,
-            width: 0.5,
-            radius: 0.03,
-            position: new BABYLON.Vector3(0, yOffset, 0),
-        })
-        .rotateUI({ visibility: 0.6, diameter: 0.08, position: new BABYLON.Vector3(0, yOffset, 0) })
-        .scaleUI({
-            visibility: 0.6,
-            diameter: 0.08,
-            minimum: 0.5,
-            maximum: 2,
-            position: new BABYLON.Vector3(0, yOffset + 0.025, 0),
-        });
-
     return chart;
 }
 
 // Scatter Plot implementation
-export function createScatterPlot(id: string, scene: BABYLON.Scene) {
+function createScatterPlot(id: string, scene: BABYLON.Scene) {
     // Create the D3 scales
     let scaleX = d3
         .scaleLinear()
@@ -304,31 +283,11 @@ export function createScatterPlot(id: string, scene: BABYLON.Scene) {
     axesOptionsScatter.labelOptions = { size: 0.25 }; // increase label text size
     anu.createAxes("myAxes", axesOptionsScatter);
 
-    const yOffset = -0.2;
-    chart
-        .scaling(BABYLON.Vector3.One().scale(CHART_SCALE_FACTOR))
-        .addTags("chart")
-        .addTags("ScatterPlot")
-        .positionUI({
-            visibility: 0.6,
-            width: 0.5,
-            radius: 0.03,
-            position: new BABYLON.Vector3(0, yOffset, 0),
-        })
-        .rotateUI({ visibility: 0.6, diameter: 0.08, position: new BABYLON.Vector3(0, yOffset, 0) })
-        .scaleUI({
-            visibility: 0.6,
-            diameter: 0.08,
-            minimum: 0.5,
-            maximum: 2,
-            position: new BABYLON.Vector3(0, yOffset + 0.025, 0),
-        });
-
     return chart;
 }
 
 //Code from 3D bar chart example
-export function create3DBarChart(id: string, scene: BABYLON.Scene) {
+function create3DBarChart(id: string, scene: BABYLON.Scene) {
     const origin = [...new Set(carData.map((item) => item.Origin))];
     const cylinders = [...new Set(carData.map((item) => item.Cylinders))].sort().reverse();
     let carsRollup = d3.flatRollup(
@@ -380,26 +339,5 @@ export function create3DBarChart(id: string, scene: BABYLON.Scene) {
     axesOptions3D.labelOptions = { size: 0.25 };
     anu.createAxes("myAxes", axesOptions3D);
 
-    const yOffset = -0.2;
-    chart
-        .scaling(BABYLON.Vector3.One().scale(CHART_SCALE_FACTOR))
-        .addTags("chart")
-        .addTags("3DBarChart")
-        .positionUI({
-            visibility: 0.6,
-            width: 0.5,
-            radius: 0.03,
-            position: new BABYLON.Vector3(0, yOffset, 0),
-        })
-        .rotateUI({ visibility: 0.6, diameter: 0.08, position: new BABYLON.Vector3(0, yOffset, 0) })
-        .scaleUI({
-            visibility: 0.6,
-            diameter: 0.08,
-            minimum: 0.5,
-            maximum: 2,
-            position: new BABYLON.Vector3(0, yOffset + 0.025, 0),
-        });
-
-    console.log();
     return chart;
 }
