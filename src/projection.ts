@@ -51,7 +51,8 @@ export function latLonToVec3(lat: number, lon: number, radius: number) {
 }
 
 export function projectOntoSphere(point: Vector3, radius: number) {
-  const dir = point.normalize()
+  const dir = point.clone()
+  dir.normalize()
   return dir.scale(radius)
 }
 

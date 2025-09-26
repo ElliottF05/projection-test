@@ -9,7 +9,7 @@ import penguinData from "../data/penguins.json" assert { type: "json" };
 // Centralized layout defaults
 export const CHART_SCALE_FACTOR = 0.8;
 
-type ChartKind = 'line' | '2dbar' | 'scatter' | '3dbar';
+export type ChartKind = 'line' | '2dbar' | 'scatter' | '3dbar';
 export class Chart {
     scene: BABYLON.Scene;
     selection: anu.Selection;
@@ -80,17 +80,22 @@ export class Chart {
         return new Chart('line', scene);
     }
 
-    getPosition = () => {
-        return this.selection.get("position");
+    getPosition = (): BABYLON.Vector3 => {
+        const data = this.selection.get("position")[0] as any;
+        return new BABYLON.Vector3(data._x, data._y, data._z);
     }
-    getRotation = () => {
-        return this.selection.get("rotation");
+    getRotation = (): BABYLON.Vector3 => {
+        const data = this.selection.get("rotation")[0] as any;
+        return new BABYLON.Vector3(data._x, data._y, data._z);
     }
     setPosition = (pos: BABYLON.Vector3) => {
         this.selection.position(pos);
     }
     setRotation = (rot: BABYLON.Vector3) => {
         this.selection.rotation(rot);
+    }
+    scale = (s: number) => {
+        this.selection.scaling(BABYLON.Vector3.One().scale(s));
     }
 }
 

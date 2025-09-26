@@ -4,6 +4,7 @@ import { GridMaterial } from '@babylonjs/materials'
 import { PointPairManager } from './PointPairManager'
 import { Chart } from './charts'
 import { line } from 'd3'
+import { ChartPair } from './ChartPair'
 
 // initialize scene
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -36,6 +37,19 @@ pointManager.create({
   initialLat: Math.PI / 4.0,
   initialLon: 0,
 })
+
+setTimeout(() => {
+  const chartPair = new ChartPair({
+    scene,
+    bigRadius,
+    plane,
+    planeWidth,
+    planeHeight,
+    chartKind: 'line',
+    initialLat: -Math.PI / 6,
+    initialLon: Math.PI / 6,
+  })
+}, 1000)
 
 sceneManager.getEngine().runRenderLoop(() => {
   // render the scene
