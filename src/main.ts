@@ -38,18 +38,16 @@ pointManager.create({
   initialLon: 0,
 })
 
-setTimeout(() => {
-  const chartPair = new ChartPair({
-    scene,
-    bigRadius,
-    plane,
-    planeWidth,
-    planeHeight,
-    chartKind: 'line',
-    initialLat: -Math.PI / 6,
-    initialLon: Math.PI / 6,
-  })
-}, 1000)
+const chartPair = new ChartPair({
+  scene,
+  bigRadius,
+  plane,
+  planeWidth,
+  planeHeight,
+  chartKind: 'line',
+  initialLat: -Math.PI / 6,
+  initialLon: Math.PI / 6,
+})
 
 sceneManager.getEngine().runRenderLoop(() => {
   // render the scene

@@ -94,7 +94,7 @@ export class ChartPair {
     }
 
     private setupBehaviors() {
-        const pb3 = (this.chart3D as any)._positionBehavior
+        const pb3 = this.chart3D._positionBehavior
         pb3.onDragStartObservable.add(() => { this.isDragging = true })
         pb3.onDragEndObservable.add(() => { this.isDragging = false })
         pb3.onPositionChangedObservable.add(() => {
@@ -104,13 +104,13 @@ export class ChartPair {
             this.setSpherePosition(pos)
         })
 
-        const pb2 = (this.chart2D as any)._positionBehavior
+        const pb2 = this.chart2D._positionBehavior
         pb2.onDragStartObservable.add(() => { this.isDragging = true })
         pb2.onDragEndObservable.add(() => { this.isDragging = false })
         pb2.onPositionChangedObservable.add(() => {
             // console.log('2D position changed')
             // if (this.ignore2D) return
-            const worldPos = (this.chart2D as any).getPosition() as Vector3
+            const worldPos = this.chart2D.getPosition()
             const inv = this.opts.plane.getWorldMatrix().clone()
             inv.invert()
             const localPos = Vector3.TransformCoordinates(worldPos, inv)
@@ -119,7 +119,7 @@ export class ChartPair {
     }
 
     public setSpherePosition(newPos: Vector3) {
-        const { bigRadius, planeWidth, planeHeight } = this.opts
+        const { bigRadius, planeWidth, planeHeight, plane } = this.opts
         this.ignore3D = true
         const proj = projectOntoSphere(newPos, bigRadius)
         this.chart3D.setPosition(proj)
@@ -130,8 +130,13 @@ export class ChartPair {
         const { nx, ny } = equirectangularNormalizedXY(lat, lon)
 
         this.ignore2D = true
-        this.chart2D.setPosition(new Vector3(nx * (planeWidth / 2), ny * (planeHeight / 2), 0))
+        // compute plane-local pos then transform to world before setting the 2D chart
+        const local2 = new Vector3(nx * (planeWidth / 2), ny * (planeHeight / 2), 0)
+        const world2 = Vector3.TransformCoordinates(local2, plane.getWorldMatrix())
+        this.chart2D.setPosition(world2)
         this.ignore2D = false
+        // ensure we clear the 3D ignore flag
+        this.ignore3D = false
     }
 
     public setProjectedLocalPosition(localPos: Vector3) {
