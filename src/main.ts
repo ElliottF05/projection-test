@@ -2,6 +2,8 @@ import { sceneManager } from './SceneManager'
 import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, MeshBuilder, StandardMaterial, Color3 } from '@babylonjs/core'
 import { GridMaterial } from '@babylonjs/materials'
 import { PointPairManager } from './PointPairManager'
+import { create3DBarChart, createLineChart, Chart } from './charts'
+import { line } from 'd3'
 
 // initialize scene
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -35,6 +37,8 @@ pointManager.create({
   initialLon: 0,
 })
 
+const lineChartProto = createLineChart('lineChart', scene)
+const lineChart = new Chart('lineChart', scene, lineChartProto)
 
 sceneManager.getEngine().runRenderLoop(() => {
   // render the scene
