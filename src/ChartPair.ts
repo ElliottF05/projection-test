@@ -172,13 +172,14 @@ export class ChartPair {
             const inv = plane.getWorldMatrix().clone()
             inv.invert()
             const local = Vector3.TransformCoordinates(worldPos, inv)
+            // ensure we project onto the plane surface (zero out depth)
+            local.z = 0
             const halfW = planeWidth / 2
             const halfH = planeHeight / 2
             local.x = Math.max(-halfW, Math.min(halfW, local.x))
             local.y = Math.max(-halfH, Math.min(halfH, local.y))
             const world2 = Vector3.TransformCoordinates(local, plane.getWorldMatrix())
-            // temp offset
-            world2.x -= 0.05
+            // no temp offset
             this.ignore2D = true
             this.chart2D.setPosition(world2)
             this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
@@ -194,8 +195,7 @@ export class ChartPair {
         this.ignore2D = true
         const worldPos = Vector3.TransformCoordinates(new Vector3(clampedX, clampedY, 0), this.opts.plane.getWorldMatrix())
         
-        // temp offset:
-        worldPos.x -= 0.1
+    // no temp offset
 
         this.chart2D.setPosition(worldPos)
         this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
