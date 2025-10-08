@@ -84,9 +84,12 @@ export class ChartPair {
             this.updateProjectedFrom3D()
         }
 
-        // temp: rotate 2d vis
-        this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
-        this.chart2D.setPosition(this.chart2D.getPosition().subtract(new Vector3(0.05, 0, 0)))
+    // ensure 2D chart is parented to the plane so its local coords align with the plane
+    // (the Chart wrapper uses anu selection behind the scenes; setPosition/getPosition use world coords)
+    // We'll rely on updating the chart2D position in world coords when projecting.
+    // temp: rotate 2d vis so it faces correctly
+    this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
+    this.chart2D.setPosition(this.chart2D.getPosition().subtract(new Vector3(0.05, 0, 0)))
 
         // sync chart visuals and wire behaviors
         this.setupBehaviors()
@@ -135,8 +138,12 @@ export class ChartPair {
     public setSpherePosition(newPos: Vector3) {
         const { bigRadius, planeWidth, planeHeight, plane } = this.opts
         this.ignore3D = true
-        const proj = projectOntoSphere(newPos, bigRadius)
-        this.chart3D.setPosition(proj)
+        if (getProjectionMode() === ProjectionMode.Planar) {
+            this.chart3D.setPosition(newPos)
+        } else {
+            const proj = projectOntoSphere(newPos, bigRadius)
+            this.chart3D.setPosition(proj)
+        }
         // update the projected 2D chart according to current projection mode
         this.updateProjectedFrom3D()
         // ensure we clear the 3D ignore flag

@@ -150,7 +150,12 @@ export class PointPair {
     public setSpherePosition(newPos: Vector3) {
         const { bigRadius, planeWidth, planeHeight } = this.opts
         this.ignoreSphere = true
-        this.sphere.position = projectOntoSphere(newPos, bigRadius)
+        // In planar mode we want free 3D dragging (do not constrain to sphere)
+        if (getProjectionMode() === ProjectionMode.Planar) {
+            this.sphere.position = newPos
+        } else {
+            this.sphere.position = projectOntoSphere(newPos, bigRadius)
+        }
         
         // compute lat/lon and update projected marker without triggering its handler
         // recompute projected position based on current projection mode
