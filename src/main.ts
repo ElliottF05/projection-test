@@ -5,6 +5,7 @@ import { PointPairManager } from './PointPairManager'
 import { Chart } from './charts'
 import { line } from 'd3'
 import { ChartPair } from './ChartPair'
+import { toggleProjectionMode, getProjectionMode } from './projection'
 
 // initialize scene
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -56,3 +57,11 @@ sceneManager.getEngine().runRenderLoop(() => {
   pointManager.resolveCollisions()
 })
 window.addEventListener('resize', () => sceneManager.getEngine().resize())
+
+// toggle projection mode with 'p'
+window.addEventListener('keydown', (ev) => {
+  if (ev.key === 'p' || ev.key === 'P') {
+    toggleProjectionMode()
+    console.log('Projection mode is now', getProjectionMode())
+  }
+})

@@ -1,6 +1,6 @@
 import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, Vector3 } from '@babylonjs/core'
 import { Chart, CHART_SCALE_FACTOR, ChartKind } from './charts'
-import { equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere } from './projection'
+import { equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere, ProjectionMode, onProjectionModeChange, getProjectionMode } from './projection'
 
 export interface ChartPairOptions {
     id?: string
@@ -77,16 +77,10 @@ export class ChartPair {
         if (typeof opts.initialLat === 'number' && typeof opts.initialLon === 'number') {
             const v = latLonToVec3(opts.initialLat, opts.initialLon, bigRadius)
             this.chart3D.setPosition(v)
-            const { nx, ny } = equirectangularNormalizedXY(opts.initialLat, opts.initialLon)
-            const local2 = new Vector3(nx * (opts.planeWidth / 2), ny * (opts.planeHeight / 2), 0)
-            const world2 = Vector3.TransformCoordinates(local2, opts.plane.getWorldMatrix())
-            this.chart2D.setPosition(world2)
+            this.updateProjectedFrom3D()
         } else {
             this.chart3D.setPosition(new Vector3(bigRadius, 0, 0))
-            const { nx, ny } = equirectangularNormalizedXY(0, 0)
-            const local2 = new Vector3(nx * (opts.planeWidth / 2), ny * (opts.planeHeight / 2), 0)
-            const world2 = Vector3.TransformCoordinates(local2, opts.plane.getWorldMatrix())
-            this.chart2D.setPosition(world2)
+            this.updateProjectedFrom3D()
         }
 
         // temp: rotate 2d vis
@@ -95,6 +89,9 @@ export class ChartPair {
 
         // sync chart visuals and wire behaviors
         this.setupBehaviors()
+
+        // respond to projection mode changes
+        onProjectionModeChange(() => this.updateProjectedFrom3D())
     }
 
     private setupBehaviors() {
@@ -127,25 +124,46 @@ export class ChartPair {
         this.ignore3D = true
         const proj = projectOntoSphere(newPos, bigRadius)
         this.chart3D.setPosition(proj)
-
-        const p = proj.clone().normalize()
-        const lat = Math.asin(p.y)
-        const lon = Math.atan2(p.z, p.x)
-        const { nx, ny } = equirectangularNormalizedXY(lat, lon)
-
-        this.ignore2D = true
-        // compute plane-local pos then transform to world before setting the 2D chart
-        const local2 = new Vector3(nx * (planeWidth / 2), ny * (planeHeight / 2), 0)
-        const world2 = Vector3.TransformCoordinates(local2, plane.getWorldMatrix())
-
-        // temp offset:
-        world2.x -= 0.05
-
-        this.chart2D.setPosition(world2)
-        this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
-        this.ignore2D = false
+        // update the projected 2D chart according to current projection mode
+        this.updateProjectedFrom3D()
         // ensure we clear the 3D ignore flag
         this.ignore3D = false
+    }
+
+    private updateProjectedFrom3D() {
+        const { plane, planeWidth, planeHeight } = this.opts
+        const mode = getProjectionMode()
+        const worldPos = this.chart3D.getPosition()
+        if (mode === ProjectionMode.Spherical) {
+            const p = worldPos.clone().normalize()
+            const lat = Math.asin(p.y)
+            const lon = Math.atan2(p.z, p.x)
+            const { nx, ny } = equirectangularNormalizedXY(lat, lon)
+            const local2 = new Vector3(nx * (planeWidth / 2), ny * (planeHeight / 2), 0)
+            const world2 = Vector3.TransformCoordinates(local2, plane.getWorldMatrix())
+            // temp offset
+            world2.x -= 0.05
+            this.ignore2D = true
+            this.chart2D.setPosition(world2)
+            this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
+            this.ignore2D = false
+        } else {
+            // Planar orthographic: transform worldPos into plane-local coords then clamp and transform back
+            const inv = plane.getWorldMatrix().clone()
+            inv.invert()
+            const local = Vector3.TransformCoordinates(worldPos, inv)
+            const halfW = planeWidth / 2
+            const halfH = planeHeight / 2
+            local.x = Math.max(-halfW, Math.min(halfW, local.x))
+            local.y = Math.max(-halfH, Math.min(halfH, local.y))
+            const world2 = Vector3.TransformCoordinates(local, plane.getWorldMatrix())
+            // temp offset
+            world2.x -= 0.05
+            this.ignore2D = true
+            this.chart2D.setPosition(world2)
+            this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
+            this.ignore2D = false
+        }
     }
 
     public setProjectedLocalPosition(localPos: Vector3) {

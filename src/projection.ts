@@ -30,14 +30,16 @@ export function inverseMercatorNormalizedXY(nx: number, ny: number) {
 // lat maps linearly: -PI/2..PI/2 -> -1..1 (clamped to maxLat)
 export function equirectangularNormalizedXY(latRad: number, lonRad: number) {
     const lat = clamp(latRad, -maxLat, maxLat)
-    const nx = lonRad / Math.PI
+  // flip sign so longitude increases map to +x on the 2D plane consistently
+  const nx = -lonRad / Math.PI
     const ny = lat / (Math.PI / 2)
     return { nx, ny }
 }
 
 // Inverse Equirectangular: normalized XY [-1,1] -> lat/lon (radians)
 export function inverseEquirectangularNormalizedXY(nx: number, ny: number) {
-    const lon = nx * Math.PI
+  // inverse of the flipped equirectangular mapping
+  const lon = -nx * Math.PI
     const lat = clamp(ny, -1, 1) * (Math.PI / 2)
     return { lat, lon }
 }
@@ -65,4 +67,36 @@ export function vec3ToLatLon(v: Vector3) {
     const lat = Math.asin(clamp(p.y, -1, 1))
     const lon = Math.atan2(p.z, p.x)
     return { lat, lon, radius: r }
+}
+
+// Projection mode: spherical (equirectangular/mercator mapping) or planar (orthographic onto plane)
+export enum ProjectionMode {
+  Spherical = 'spherical',
+  Planar = 'planar',
+}
+
+let _currentProjectionMode: ProjectionMode = ProjectionMode.Spherical
+type ModeListener = (mode: ProjectionMode) => void
+const _modeListeners: ModeListener[] = []
+
+export function getProjectionMode() {
+  return _currentProjectionMode
+}
+
+export function setProjectionMode(mode: ProjectionMode) {
+  if (_currentProjectionMode === mode) return
+  _currentProjectionMode = mode
+  for (const l of _modeListeners) l(mode)
+}
+
+export function toggleProjectionMode() {
+  setProjectionMode(_currentProjectionMode === ProjectionMode.Spherical ? ProjectionMode.Planar : ProjectionMode.Spherical)
+}
+
+export function onProjectionModeChange(fn: ModeListener) {
+  _modeListeners.push(fn)
+  return () => {
+    const idx = _modeListeners.indexOf(fn)
+    if (idx >= 0) _modeListeners.splice(idx, 1)
+  }
 }

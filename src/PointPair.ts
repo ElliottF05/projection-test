@@ -1,5 +1,5 @@
 import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, SixDofDragBehavior, Vector3 } from '@babylonjs/core'
-import { mercatorNormalizedXY, inverseMercatorNormalizedXY, equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere } from './projection'
+import { mercatorNormalizedXY, inverseMercatorNormalizedXY, equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere, ProjectionMode, onProjectionModeChange, getProjectionMode } from './projection'
 
 export interface PointPairOptions {
     id: string
@@ -86,20 +86,21 @@ export class PointPair {
             const v = latLonToVec3(opts.initialLat, opts.initialLon, bigRadius)
             this.sphere.position = v
             // const { nx, ny } = mercatorNormalizedXY(opts.initialLat, opts.initialLon)
-            const { nx, ny } = equirectangularNormalizedXY(opts.initialLat, opts.initialLon)
-            this.projected.position = new Vector3(nx * (opts.planeWidth / 2), ny * (opts.planeHeight / 2), 0)
+            this.updateProjectedFromSphere()
         } else {
             // default placement
             this.sphere.position = new Vector3(bigRadius, 0, 0)
             // const { nx, ny } = mercatorNormalizedXY(0, 0)
-            const { nx, ny } = equirectangularNormalizedXY(0, 0)
-            this.projected.position = new Vector3(nx * (opts.planeWidth / 2), ny * (opts.planeHeight / 2), 0)
+            this.updateProjectedFromSphere()
         }
         
         // parent projected to plane for local coords
         this.projected.parent = opts.plane
         
         this.setupBehaviors()
+
+        // listen for projection mode changes and update the projected marker accordingly
+        onProjectionModeChange(() => this.updateProjectedFromSphere())
     }
     
     private setupBehaviors() {
@@ -135,18 +136,38 @@ export class PointPair {
         this.sphere.position = projectOntoSphere(newPos, bigRadius)
         
         // compute lat/lon and update projected marker without triggering its handler
+        // recompute projected position based on current projection mode
+        this.updateProjectedFromSphere()
+        
+        this.ignoreSphere = false
+    }
+
+    // Update this.projected.position from current sphere position depending on projection mode
+    private updateProjectedFromSphere() {
+        const { bigRadius, planeWidth, planeHeight } = this.opts
+        const mode = getProjectionMode()
         const p = this.sphere.position.clone().normalize()
         const lat = Math.asin(p.y)
         const lon = Math.atan2(p.z, p.x)
-        // const { nx, ny } = mercatorNormalizedXY(lat, lon)
-        const { nx, ny } = equirectangularNormalizedXY(lat, lon)
-        
-        this.ignoreProjected = true
-        this.projected.position.x = nx * (planeWidth / 2)
-        this.projected.position.y = ny * (planeHeight / 2)
-        this.ignoreProjected = false
-        
-        this.ignoreSphere = false
+        if (mode === ProjectionMode.Spherical) {
+            const { nx, ny } = equirectangularNormalizedXY(lat, lon)
+            this.ignoreProjected = true
+            this.projected.position.x = nx * (planeWidth / 2)
+            this.projected.position.y = ny * (planeHeight / 2)
+            this.ignoreProjected = false
+        } else {
+            // Planar: orthographic projection onto the plane's X/Y local coordinates
+            // Compute world position of sphere and then transform to plane-local
+            const worldPos = this.sphere.position
+            // plane is parent of projected, so transform worldPos into plane local by using plane.getWorldMatrix().invert()
+            const inv = this.opts.plane.getWorldMatrix().clone()
+            inv.invert()
+            const local = Vector3.TransformCoordinates(worldPos, inv)
+            this.ignoreProjected = true
+            this.projected.position.x = local.x
+            this.projected.position.y = local.y
+            this.ignoreProjected = false
+        }
     }
     
     // Public helper: set projected (local plane) position and update sphere accordingly
