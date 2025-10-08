@@ -31,6 +31,7 @@ export class PointPair {
     private opts: PointPairOptions
     private ignoreSphere = false
     private ignoreProjected = false
+    private projectedDragDistance: number | null = null
     
     constructor(opts: PointPairOptions) {
         this.id = opts.id
@@ -119,13 +120,29 @@ export class PointPair {
         
         const projDrag = new SixDofDragBehavior()
         projDrag.onDragStartObservable.add(() => { this.isDragging = true })
-        projDrag.onDragEndObservable.add(() => { this.isDragging = false })
+        projDrag.onDragEndObservable.add(() => {
+            this.isDragging = false
+            // clear stored planar drag distance
+            this.projectedDragDistance = null
+        })
         projDrag.onPositionChangedObservable.add(() => {
             if (this.ignoreProjected) return
             // delegate to setter which clamps and updates the sphere
             this.setProjectedLocalPosition(this.projected.position.clone())
         })
         this.projected.addBehavior(projDrag)
+        // when a projected drag starts, record the current distance from the plane along its normal (planar mode)
+        projDrag.onDragStartObservable.add(() => {
+            if (getProjectionMode() !== ProjectionMode.Planar) return
+            // compute world coordinates for the projected local position
+            const worldPos = Vector3.TransformCoordinates(this.projected.position.clone(), this.opts.plane.getWorldMatrix())
+            // compute plane normal in world space (transform local Z)
+            const localNormal = new Vector3(0, 0, 1)
+            const normalWorld = Vector3.TransformNormal(localNormal, this.opts.plane.getWorldMatrix()).normalize()
+            // signed distance from plane point to sphere along normal
+            const diff = this.sphere.position.subtract(worldPos)
+            this.projectedDragDistance = Vector3.Dot(diff, normalWorld)
+        })
         
     }
     
@@ -189,6 +206,21 @@ export class PointPair {
         // const { lat, lon } = inverseMercatorNormalizedXY(nx, ny)
         const { lat, lon } = inverseEquirectangularNormalizedXY(nx, ny)
 
+        // If in planar projection mode and we have a stored drag distance, copy the 2D world translation to the 3D point
+        if (getProjectionMode() === ProjectionMode.Planar && this.projectedDragDistance !== null) {
+            // world position of the projected local
+            const worldPos = Vector3.TransformCoordinates(new Vector3(clampedX, clampedY, 0), this.opts.plane.getWorldMatrix())
+            // plane normal in world space
+            const normal = Vector3.TransformNormal(new Vector3(0, 0, 1), this.opts.plane.getWorldMatrix()).normalize()
+            // position the sphere at worldPos + normal * storedDistance
+            const desired = worldPos.add(normal.scale(this.projectedDragDistance))
+            this.ignoreSphere = true
+            this.sphere.position = desired
+            this.ignoreSphere = false
+            return
+        }
+
+        // default spherical mapping behavior (or when no stored drag distance)
         this.ignoreSphere = true
         const globePos = latLonToVec3(lat, lon, bigRadius)
         this.sphere.position = globePos

@@ -30,6 +30,7 @@ export class ChartPair {
     private opts: ChartPairOptions
     private ignore3D = false
     private ignore2D = false
+    private projectedDragDistance: number | null = null
     private static _nextId = 1
 
     constructor(opts: ChartPairOptions) {
@@ -107,7 +108,7 @@ export class ChartPair {
 
         const pb2 = this.chart2D._positionBehavior
         pb2.onDragStartObservable.add(() => { this.isDragging = true })
-        pb2.onDragEndObservable.add(() => { this.isDragging = false })
+        pb2.onDragEndObservable.add(() => { this.isDragging = false; this.projectedDragDistance = null })
         pb2.onPositionChangedObservable.add(() => {
             if (this.ignore2D) return
             const worldPos = this.chart2D.getPosition()
@@ -117,6 +118,18 @@ export class ChartPair {
             this.setProjectedLocalPosition(localPos)
         })
         pb2.detachCameraControls = true
+        // when 2D drag starts, record current distance from plane along its normal
+        pb2.onDragStartObservable.add(() => {
+            if (getProjectionMode() !== ProjectionMode.Planar) return
+            const worldPos = this.chart2D.getPosition()
+            const inv = this.opts.plane.getWorldMatrix().clone()
+            inv.invert()
+            const local = Vector3.TransformCoordinates(worldPos, inv)
+            // plane normal in world space
+            const normal = Vector3.TransformNormal(new Vector3(0,0,1), this.opts.plane.getWorldMatrix()).normalize()
+            const diff = this.chart3D.getPosition().subtract(worldPos)
+            this.projectedDragDistance = Vector3.Dot(diff, normal)
+        })
     }
 
     public setSpherePosition(newPos: Vector3) {
@@ -183,6 +196,18 @@ export class ChartPair {
 
         const nx = clampedX / (planeWidth / 2)
         const ny = clampedY / (planeHeight / 2)
+        // If in planar mode and we have a stored drag distance, position the 3D chart by copying world translation and preserving distance along plane normal
+        if (getProjectionMode() === ProjectionMode.Planar && this.projectedDragDistance !== null) {
+            const world = Vector3.TransformCoordinates(new Vector3(clampedX, clampedY, 0), this.opts.plane.getWorldMatrix())
+            // plane normal in world space
+            const normal = Vector3.TransformNormal(new Vector3(0,0,1), this.opts.plane.getWorldMatrix()).normalize()
+            const desired = world.add(normal.scale(this.projectedDragDistance))
+            this.ignore3D = true
+            this.chart3D.setPosition(desired)
+            this.ignore3D = false
+            return
+        }
+
         const { lat, lon } = inverseEquirectangularNormalizedXY(nx, ny)
 
         this.ignore3D = true
