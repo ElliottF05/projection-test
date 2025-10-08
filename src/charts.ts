@@ -54,6 +54,8 @@ export class Chart {
         }
         this.selection.positionUI(positionUiOptions);
         this._positionBehavior = positionUiOptions.behavior;
+        this._positionBehavior.faceCameraOnDragStart = true;
+        this._positionBehavior.rotateAroundYOnly = true;
 
         const rotateUiOptions = {
             name: id + "rotateUI",
@@ -70,10 +72,11 @@ export class Chart {
             minimum: 0.5,
             maximum: 2,
             position: new BABYLON.Vector3(0, yOffset + 0.025, 0),
-            behavior: new BABYLON.PointerDragBehavior(),
+            behavior: new BABYLON.PointerDragBehavior({ dragAxis: new BABYLON.Vector3(0, 1, 0) }),
         }
         this.selection.scaleUI(scaleUiOptions);
         this._scaleBehavior = scaleUiOptions.behavior;
+        this._scaleBehavior.moveAttached = false;
     }
 
     static makeLineChart(scene: BABYLON.Scene) {

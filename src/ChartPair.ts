@@ -102,9 +102,7 @@ export class ChartPair {
         pb3.onDragStartObservable.add(() => { this.isDragging = true })
         pb3.onDragEndObservable.add(() => { this.isDragging = false })
         pb3.onPositionChangedObservable.add(() => {
-
-            // console.log('3D position changed')
-            // if (this.ignore3D) return
+            if (this.ignore3D) return
             const pos = this.chart3D.getPosition()
             this.setSpherePosition(pos)
         })
@@ -114,8 +112,7 @@ export class ChartPair {
         pb2.onDragStartObservable.add(() => { this.isDragging = true })
         pb2.onDragEndObservable.add(() => { this.isDragging = false })
         pb2.onPositionChangedObservable.add(() => {
-            // console.log('2D position changed')
-            // if (this.ignore2D) return
+            if (this.ignore2D) return
             const worldPos = this.chart2D.getPosition()
             const inv = this.opts.plane.getWorldMatrix().clone()
             inv.invert()
@@ -160,7 +157,7 @@ export class ChartPair {
         const worldPos = Vector3.TransformCoordinates(new Vector3(clampedX, clampedY, 0), this.opts.plane.getWorldMatrix())
         
         // temp offset:
-        worldPos.x -= 0.05
+        worldPos.x -= 0.1
 
         this.chart2D.setPosition(worldPos)
         this.chart2D.setRotation(new Vector3(0, Math.PI / 2, 0))
