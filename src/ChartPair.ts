@@ -1,6 +1,6 @@
 import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, Vector3 } from '@babylonjs/core'
-import { Chart, CHART_SCALE_FACTOR, ChartKind } from './charts'
-import { equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere, ProjectionMode, onProjectionModeChange, getProjectionMode } from './projection'
+import { Chart, CHART_SCALE_FACTOR, ChartKind } from '../packages/shared/Chart'
+import { equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere, ProjectionMode, onProjectionModeChange, getProjectionMode } from '../packages/shared/projection'
 
 export interface ChartPairOptions {
     id?: string

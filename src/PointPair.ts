@@ -1,5 +1,5 @@
 import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, SixDofDragBehavior, Vector3 } from '@babylonjs/core'
-import { mercatorNormalizedXY, inverseMercatorNormalizedXY, equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere, ProjectionMode, onProjectionModeChange, getProjectionMode } from './projection'
+import { mercatorNormalizedXY, inverseMercatorNormalizedXY, equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere, ProjectionMode, onProjectionModeChange, getProjectionMode } from '../packages/shared/projection'
 import { SyncManager } from './sync'
 
 export interface PointPairOptions {

@@ -1,10 +1,8 @@
 import * as anu from "@jpmorganchase/anu";
 import * as BABYLON from "@babylonjs/core";
-import * as GUI from "@babylonjs/gui";
-import * as GUI3D from "@babylonjs/gui/3D";
 import * as d3 from "d3";
-import carData from "../data/cars.json" assert { type: "json" };
-import penguinData from "../data/penguins.json" assert { type: "json" };
+import carData from "../packages/shared/data/cars.json" assert { type: "json" };
+import penguinData from "../packages/shared/data/penguins.json" assert { type: "json" };
 
 // Centralized layout defaults
 export const CHART_SCALE_FACTOR = 0.8;
@@ -79,30 +77,32 @@ export class Chart {
         this._scaleBehavior.moveAttached = false;
     }
 
-    static makeLineChart(scene: BABYLON.Scene) {
-        return new Chart('line', scene);
+    sendSync() {
+        // placeholder for future sync code
     }
 
-    getPosition = (): BABYLON.Vector3 => {
+    getPosition(): BABYLON.Vector3 {
         const data = this.selection.get("position")[0] as any;
         return new BABYLON.Vector3(data._x, data._y, data._z);
     }
-    getRotation = (): BABYLON.Vector3 => {
+    getRotation(): BABYLON.Vector3 {
         const data = this.selection.get("rotation")[0] as any;
         return new BABYLON.Vector3(data._x, data._y, data._z);
     }
-    setPosition = (pos: BABYLON.Vector3) => {
+    setPosition(pos: BABYLON.Vector3, skipSync = false) {
         this.selection.position(pos);
+        if (!skipSync) this.sendSync();
     }
-    setRotation = (rot: BABYLON.Vector3) => {
+    setRotation(rot: BABYLON.Vector3, skipSync = false) {
         this.selection.rotation(rot);
         this.selection.run((d,n,i) => {
             if ('rotationQuaternion' in n) {
                 n.rotationQuaternion = BABYLON.Quaternion.FromEulerVector(rot);
             }
         })
+        if (!skipSync) this.sendSync();
     }
-    scale = (s: number) => {
+    scale(s: number) {
         this.selection.scaling(BABYLON.Vector3.One().scale(s));
     }
 }

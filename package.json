@@ -1,11 +1,11 @@
 {
   "name": "babylon-projection",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview --port 5174"
+    "dev:2d": "vite --config packages/client-2d/vite.config.ts",
+    "dev:3d": "vite --config packages/client-3d/vite.config.ts"
   },
   "dependencies": {
     "@babylonjs/core": "8.26.0",
@@ -19,7 +19,9 @@
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
+    "@types/node": "^24.7.2",
     "typescript": "^5.1.6",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }
