@@ -31,6 +31,10 @@ export class ChartPair {
     private ignore3D = false
     private ignore2D = false
     private projectedDragDistance: number | null = null
+    // sync hooks
+    public ignoreRemote: boolean = false
+    public onLocalChange?: () => void
+    private _localChangePending: number | null = null
     private static _nextId = 1
 
     constructor(opts: ChartPairOptions) {
@@ -148,6 +152,13 @@ export class ChartPair {
         this.updateProjectedFrom3D()
         // ensure we clear the 3D ignore flag
         this.ignore3D = false
+        // emit local change for sync
+        if (!this.ignoreRemote && this.onLocalChange) {
+            if (!this._localChangePending) this._localChangePending = requestAnimationFrame(() => {
+                this._localChangePending = null
+                if (this.onLocalChange) this.onLocalChange()
+            })
+        }
     }
 
     private updateProjectedFrom3D() {
@@ -220,6 +231,13 @@ export class ChartPair {
         this.ignore3D = true
         this.chart3D.setPosition(latLonToVec3(lat, lon, bigRadius))
         this.ignore3D = false
+        // emit local change for sync
+        if (!this.ignoreRemote && this.onLocalChange) {
+            if (!this._localChangePending) this._localChangePending = requestAnimationFrame(() => {
+                this._localChangePending = null
+                if (this.onLocalChange) this.onLocalChange()
+            })
+        }
     }
 
     public showCollision3D(visible: boolean) {

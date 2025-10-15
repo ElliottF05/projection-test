@@ -1,5 +1,6 @@
 import { Scene, Mesh, MeshBuilder, StandardMaterial, Color3, SixDofDragBehavior, Vector3 } from '@babylonjs/core'
 import { mercatorNormalizedXY, inverseMercatorNormalizedXY, equirectangularNormalizedXY, inverseEquirectangularNormalizedXY, latLonToVec3, projectOntoSphere, ProjectionMode, onProjectionModeChange, getProjectionMode } from './projection'
+import { SyncManager } from './sync'
 
 export interface PointPairOptions {
     id: string
@@ -33,7 +34,12 @@ export class PointPair {
     private ignoreProjected = false
     private projectedDragDistance: number | null = null
     
-    constructor(opts: PointPairOptions) {
+    // sync stuff
+    private syncManager: SyncManager
+
+
+    constructor(syncManager: SyncManager, opts: PointPairOptions) {
+        this.syncManager = syncManager
         this.id = opts.id
         this.opts = opts
         const { scene, id, bigRadius } = opts
@@ -145,9 +151,17 @@ export class PointPair {
         })
         
     }
+
+    private sendSync() {
+        console.log('sending sync for point pair', this.id)
+        this.syncManager.pointPairsMap.set(this.id, {
+            id: this.id,
+            pos: { x: this.sphere.position.x, y: this.sphere.position.y, z: this.sphere.position.z },
+        })
+    }
     
     // Public helper: set sphere position programmatically and update projected marker
-    public setSpherePosition(newPos: Vector3) {
+    public setSpherePosition(newPos: Vector3, skipSync: boolean = false) {
         const { bigRadius, planeWidth, planeHeight } = this.opts
         this.ignoreSphere = true
         // In planar mode we want free 3D dragging (do not constrain to sphere)
@@ -162,6 +176,10 @@ export class PointPair {
         this.updateProjectedFromSphere()
         
         this.ignoreSphere = false
+
+        if (!skipSync) {
+            this.sendSync()
+        }
     }
 
     // Update this.projected.position from current sphere position depending on projection mode
@@ -193,7 +211,7 @@ export class PointPair {
     }
     
     // Public helper: set projected (local plane) position and update sphere accordingly
-    public setProjectedLocalPosition(localPos: Vector3) {
+    public setProjectedLocalPosition(localPos: Vector3, skipSync: boolean = false) {
         const { bigRadius, planeWidth, planeHeight } = this.opts
         // clamp to plane extents
         const clampedX = Math.min(Math.max(localPos.x, -planeWidth / 2), planeWidth / 2)
@@ -222,14 +240,17 @@ export class PointPair {
             this.ignoreSphere = true
             this.sphere.position = desired
             this.ignoreSphere = false
-            return
+        } else {
+            // default spherical mapping behavior (or when no stored drag distance)
+            this.ignoreSphere = true
+            const globePos = latLonToVec3(lat, lon, bigRadius)
+            this.sphere.position = globePos
+            this.ignoreSphere = false
         }
 
-        // default spherical mapping behavior (or when no stored drag distance)
-        this.ignoreSphere = true
-        const globePos = latLonToVec3(lat, lon, bigRadius)
-        this.sphere.position = globePos
-        this.ignoreSphere = false
+        if (!skipSync) {
+            this.sendSync()
+        }
     }
 
     // Collision visual controls

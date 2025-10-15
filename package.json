@@ -12,7 +12,10 @@
     "@babylonjs/gui": "^8.29.0",
     "@babylonjs/materials": "^8.26.0",
     "@jpmorganchase/anu": "^0.6.3",
-    "d3": "^7.9.0"
+    "@y/websocket-server": "^0.1.1",
+    "d3": "^7.9.0",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",

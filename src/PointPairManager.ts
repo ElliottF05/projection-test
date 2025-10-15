@@ -1,24 +1,29 @@
-import { PointPair } from './PointPair'
+import { PointPair, PointPairOptions } from './PointPair'
+import { SyncManager } from './sync'
 
 export class PointPairManager {
-    pairs: PointPair[] = []
+    pairs: Map<string, PointPair> = new Map()
+    syncManager?: SyncManager
+
+    setSyncManager(syncManager: SyncManager) {
+        this.syncManager = syncManager
+    }
     
-    create(options: ConstructorParameters<typeof PointPair>[0]) {
-        const pair = new PointPair(options)
+    create(syncManager: SyncManager, options: PointPairOptions) {
+        const pair = new PointPair(syncManager, options)
         this.add(pair)
         return pair
     }
     
     add(pair: PointPair) {
-        this.pairs.push(pair)
+        this.pairs.set(pair.id, pair)
     }
     
     remove(pairOrId: PointPair | string) {
         const id = typeof pairOrId === 'string' ? pairOrId : pairOrId.id
-        const idx = this.pairs.findIndex(p => p.id === id)
-        if (idx >= 0) this.pairs.splice(idx, 1)
-        }
-    
+        this.pairs.delete(id)
+    }
+
     forEach(fn: (p: PointPair) => void) {
         this.pairs.forEach(fn)
     }
@@ -28,19 +33,21 @@ export class PointPairManager {
         // Two-pass collision resolution:
         // 1) 3D pass: check distances on sphere surface (Euclidean in 3D) and separate overlapping pairs
         // 2) 2D pass: check distances on the projection plane (local plane coordinates) and separate overlaps
+
+        const pairsArray = Array.from(this.pairs.values());
         
         // Reset all collision visuals first
-        for (const p of this.pairs) {
+        for (const p of pairsArray) {
             // hide both until detected
             p.showCollision3D(false) 
             p.showCollision2D(false)
         }
 
         // 3D pass
-        for (let i = 0; i < this.pairs.length; i++) {
-            for (let j = i + 1; j < this.pairs.length; j++) {
-                const a = this.pairs[i]
-                const b = this.pairs[j]
+        for (let i = 0; i < pairsArray.length; i++) {
+            for (let j = i + 1; j < pairsArray.length; j++) {
+                const a = pairsArray[i]
+                const b = pairsArray[j]
                 const pa = a.sphere.position
                 const pb = b.sphere.position
                 const delta = pb.subtract(pa)
@@ -80,10 +87,10 @@ export class PointPairManager {
         }
         
         // 2D pass (plane local coords). Use projected.parent to get local positions
-        for (let i = 0; i < this.pairs.length; i++) {
-            for (let j = i + 1; j < this.pairs.length; j++) {
-                const a = this.pairs[i]
-                const b = this.pairs[j]
+        for (let i = 0; i < pairsArray.length; i++) {
+            for (let j = i + 1; j < pairsArray.length; j++) {
+                const a = pairsArray[i]
+                const b = pairsArray[j]
                 // both projected are parented to the same plane, so positions are local
                 const pa = a.projected.position
                 const pb = b.projected.position

@@ -6,6 +6,7 @@ import { Chart } from './charts'
 import { line } from 'd3'
 import { ChartPair } from './ChartPair'
 import { toggleProjectionMode, getProjectionMode } from './projection'
+import { SyncManager } from './sync'
 
 // initialize scene
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -16,9 +17,14 @@ const env = sceneManager.createEnvironment({ bigRadius: 1.5 })
 const { bigSphere, bigRadius, ground, plane, planeWidth, planeHeight } = env
 
 const pointManager = new PointPairManager()
+const syncManager = new SyncManager()
 
-// creat point pair via manager
-pointManager.create({
+// wire circular references after construction
+pointManager.setSyncManager(syncManager)
+syncManager.setPointPairManager(pointManager)
+
+// create point pair via manager
+const p1 = pointManager.create(syncManager,{
   id: 'pair1',
   scene,
   bigRadius,
@@ -28,7 +34,8 @@ pointManager.create({
   initialLat: 0,
   initialLon: 0,
 })
-pointManager.create({
+
+const p2 = pointManager.create(syncManager, {
   id: 'pair2',
   scene,
   bigRadius,
@@ -38,6 +45,10 @@ pointManager.create({
   initialLat: Math.PI / 4.0,
   initialLon: 0,
 })
+
+// register with sync
+// sync.registerPointPair(p1)
+// sync.registerPointPair(p2)
 
 const chartPair = new ChartPair({
   scene,
@@ -49,6 +60,9 @@ const chartPair = new ChartPair({
   initialLat: -Math.PI / 6,
   initialLon: Math.PI / 6,
 })
+
+syncManager.registerPointPair(p1);
+
 
 sceneManager.getEngine().runRenderLoop(() => {
   // render the scene
